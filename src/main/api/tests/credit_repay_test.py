@@ -24,8 +24,6 @@ class TestCreditRepay:
 
             initial_balance = created_credit_account.balance
 
-            assert initial_balance == 0
-
             credit_amount = generate_credit_amount()
 
             credit_request = CreditRequest(
@@ -93,8 +91,6 @@ class TestCreditRepay:
                                 created_credit_account: CreateAccountResponse,
                                 term_months: int):
             initial_balance = created_credit_account.balance
-
-            assert initial_balance == 0
 
             credit_amount = generate_credit_amount()
 

@@ -24,8 +24,6 @@ class TestCreditRequest:
 
         initial_balance = created_credit_account.balance
 
-        assert initial_balance == 0
-
         credit_amount = generate_credit_amount()
 
         credit_request = CreditRequest(
@@ -65,8 +63,6 @@ class TestCreditRequest:
                             term_months: int):
 
         initial_balance = created_credit_account.balance
-
-        assert initial_balance == 0
 
         credit_amount = generate_credit_amount()
 

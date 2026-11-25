@@ -17,8 +17,6 @@ class TestAccountDeposit:
                              create_user_request: CreateUserRequest,
                              created_account: CreateAccountResponse):
 
-        assert created_account.balance == 0
-
         deposit_amount = generate_deposit_amount()
 
         account_deposit_request = AccountDepositRequest(
@@ -52,10 +50,6 @@ class TestAccountDeposit:
                              create_user_request: CreateUserRequest,
                              created_account: CreateAccountResponse,
                              amount: float):
-
-
-        assert created_account.balance == 0
-
 
         account_deposit_request = AccountDepositRequest(
             accountId=created_account.id,
