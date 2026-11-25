@@ -7,116 +7,144 @@ from src.main.api.models.create_credit_user_request import CreateCreditUserReque
 from src.main.api.db.crud.account_crud import AccountCrudDb as Account
 from src.main.api.models.credit_repay_request import CreditRepayRequest
 from src.main.api.models.credit_request import CreditRequest
-
-
+from src.main.api.utils.helpers import generate_credit_amount, calculate_balance_after_credit_request, \
+    calculate_balance_after_credit_repay, generate_partial_credit_repay_amount
 
 
 class TestCreditRepay:
         @pytest.mark.parametrize(
-            "credit_amount, term_months",
-            [
-                (10000, 12)
-            ]
+            "term_months", [12]
         )
         def test_credit_repay_request(self,
                                 db_session: Session,
                                 api_manager: ApiManager,
                                 create_credit_user_request: CreateCreditUserRequest,
                                 created_credit_account: CreateAccountResponse,
-                                credit_amount: float,
                                 term_months: int):
+
             initial_balance = created_credit_account.balance
 
             assert initial_balance == 0
 
-            account_id = created_credit_account.id
+            credit_amount = generate_credit_amount()
 
             credit_request = CreditRequest(
-                accountId=account_id,
+                accountId=created_credit_account.id,
                 amount=credit_amount,
                 termMonths=term_months
             )
 
-            credit_response = api_manager.user_steps.credit_request(create_credit_user_request, credit_request)
+            credit_response = api_manager.user_steps.credit_request(
+                create_credit_user_request,
+                credit_request
+            )
 
-            account_from_db = Account.get_account_by_id(db_session, account_id)
+            account_from_db = Account.get_account_by_id(
+                db_session,
+                created_credit_account.id
+            )
+
+            account_balance_after_credit_request = calculate_balance_after_credit_request(
+                initial_balance,
+                credit_amount
+            )
 
             assert account_from_db is not None, 'Аккаунт отсутствует в БД'
-            assert account_from_db.balance == initial_balance + credit_amount, 'Поле баланса для созданного аккаунта отсутствует в БД'
+            assert account_from_db.balance == account_balance_after_credit_request, 'Некорректный баланс аккаунта после получения кредита'
 
-            balance_after_credit = account_from_db.balance
-            credit_id = credit_response.creditId
 
             credit_repay_request = CreditRepayRequest(
-                creditId=credit_id,
-                accountId=account_id,
+                creditId=credit_response.creditId,
+                accountId=created_credit_account.id,
                 amount=credit_amount
             )
 
-            credit_repay_response = api_manager.user_steps.credit_repay(create_credit_user_request, credit_repay_request)
+            credit_repay_response = api_manager.user_steps.credit_repay(
+                create_credit_user_request,
+                credit_repay_request
+            )
 
             db_session.expire_all()
 
-            account_from_db_after_credit_repay = Account.get_account_by_id(db_session, account_id)
+            account_from_db_after_credit_repay = Account.get_account_by_id(
+                db_session,
+                created_credit_account.id
+            )
+
+            account_balance_after_credit_repay = calculate_balance_after_credit_repay(
+                account_balance_after_credit_request,
+                credit_amount
+            )
 
             assert account_from_db_after_credit_repay is not None,  'Аккаунт отсутствует в БД'
-            assert account_from_db_after_credit_repay.balance == balance_after_credit - credit_amount, 'Поле баланса для аккаунта отсутствует в БД'
+            assert account_from_db_after_credit_repay.balance == account_balance_after_credit_repay, 'Некорректный баланс аккаунта после погашения кредита'
             assert credit_repay_response.amountDeposited == credit_amount
 
 
 
 
         @pytest.mark.parametrize(
-            "credit_amount, term_months",
-            [
-                (10000, 12)
-            ]
+            "term_months", [12]
         )
         def test_partial_credit_repay(self,
                                 db_session: Session,
                                 api_manager: ApiManager,
                                 create_credit_user_request: CreateCreditUserRequest,
                                 created_credit_account: CreateAccountResponse,
-                                credit_amount: float,
                                 term_months: int):
             initial_balance = created_credit_account.balance
 
             assert initial_balance == 0
 
-            account_id = created_credit_account.id
+            credit_amount = generate_credit_amount()
 
             credit_request = CreditRequest(
-                accountId=account_id,
+                accountId=created_credit_account.id,
                 amount=credit_amount,
                 termMonths=term_months
             )
 
-            credit_response = api_manager.user_steps.credit_request(create_credit_user_request, credit_request)
+            credit_response = api_manager.user_steps.credit_request(
+                create_credit_user_request,
+                credit_request
+            )
 
-            account_from_db = Account.get_account_by_id(db_session, account_id)
+            account_from_db = Account.get_account_by_id(
+                db_session,
+                created_credit_account.id
+            )
+
+            account_balance_after_credit_request = calculate_balance_after_credit_request(
+                initial_balance,
+                credit_amount
+            )
 
             assert account_from_db is not None, 'Аккаунт отсутствует в БД'
-            assert account_from_db.balance == initial_balance + credit_amount, 'Поле баланса для созданного аккаунта отсутствует в БД'
+            assert account_from_db.balance == account_balance_after_credit_request, 'Некорректный баланс аккаунта после получения кредита'
 
-            balance_after_credit = account_from_db.balance
-            credit_id = credit_response.creditId
 
-            partial_amount = credit_amount / 2
+            partial_amount = generate_partial_credit_repay_amount(credit_amount)
 
             partial_credit_repay_request = CreditRepayRequest(
-                creditId=credit_id,
-                accountId=account_id,
+                creditId=credit_response.creditId,
+                accountId=created_credit_account.id,
                 amount=partial_amount
             )
 
-            api_manager.user_steps.partial_credit_repay(create_credit_user_request, partial_credit_repay_request)
+            partial_credit_repay_response = api_manager.user_steps.partial_credit_repay(
+                create_credit_user_request,
+                partial_credit_repay_request
+            )
 
             db_session.expire_all()
 
-            account_from_db_after_credit_repay = Account.get_account_by_id(db_session, account_id)
+            account_from_db_after_credit_repay = Account.get_account_by_id(
+                db_session,
+                created_credit_account.id
+            )
 
             assert account_from_db_after_credit_repay is not None,  'Аккаунт отсутствует в БД'
-            assert account_from_db_after_credit_repay.balance == balance_after_credit, 'Поле баланса для аккаунта отсутствует в БД'
+            assert account_from_db_after_credit_repay.balance == account_balance_after_credit_request, 'Некорректный баланс аккаунта после попытки частичного погашения кредита'
 
 
 
